@@ -54,6 +54,7 @@ public class OverlayView extends View {
     private float mTargetAspectRatio;
     private float[] mGridPoints = null;
     private boolean mShowCropFrame, mShowCropGrid;
+    private boolean mEnableEdgeMove = true;
     private boolean mCircleDimmedLayer;
     private int mDimmedColor;
     private Path mCircularPath = new Path();
@@ -355,11 +356,11 @@ public class OverlayView extends View {
 
     /**
      * * The order of the corners is:
-     * 0------->1
-     * ^        |
-     * |   4    |
-     * |        v
-     * 3<-------2
+     * 0---5-->1
+     * ^       |
+     * 8   4   6
+     * |       v
+     * 3<--7---2
      */
     private void updateCropViewRect(float touchX, float touchY) {
         mTempRect.set(mCropViewRect);
@@ -377,6 +378,19 @@ public class OverlayView extends View {
                 break;
             case 3:
                 mTempRect.set(touchX, mCropViewRect.top, mCropViewRect.right, touchY);
+                break;
+            // resize edge
+            case 5:
+                mTempRect.set(mCropViewRect.left, touchY, mCropViewRect.right, mCropViewRect.bottom);
+                break;
+            case 6:
+                mTempRect.set(mCropViewRect.left, mCropViewRect.top, touchX, mCropViewRect.bottom);
+                break;
+            case 7:
+                mTempRect.set(mCropViewRect.left, mCropViewRect.top, mCropViewRect.right,  touchY);
+                break;
+            case 8:
+                mTempRect.set(touchX, mCropViewRect.top, mCropViewRect.right, mCropViewRect.bottom);
                 break;
             // move rectangle
             case 4:
@@ -406,11 +420,11 @@ public class OverlayView extends View {
 
     /**
      * * The order of the corners in the float array is:
-     * 0------->1
-     * ^        |
-     * |   4    |
-     * |        v
-     * 3<-------2
+     * 0---5-->1
+     * ^       |
+     * 8   4   6
+     * |       v
+     * 3<--7---2
      *
      * @return - index of corner that is being dragged
      */
@@ -426,25 +440,43 @@ public class OverlayView extends View {
             }
         }
 
+        if (mEnableEdgeMove && closestPointIndex < 0){
+
+            double distanceToEdgeTop = Math.abs( touchY - mCropViewRect.top);
+            double distanceToEdgeRight = Math.abs( touchX - mCropViewRect.right);
+            double distanceToEdgeBottom = Math.abs( touchY - mCropViewRect.bottom);
+            double distanceToEdgeLeft = Math.abs( touchX - mCropViewRect.left);
+
+
+
+            if (mCropViewRect.top<=touchY && touchY<=mCropViewRect.bottom){
+                if (distanceToEdgeRight<closestPointDistance){
+                    closestPointDistance = distanceToEdgeRight;
+                    closestPointIndex = 6;
+                }
+                if (distanceToEdgeLeft<closestPointDistance){
+                    closestPointDistance = distanceToEdgeLeft;
+                    closestPointIndex = 8;
+                }
+            }
+
+            if (mCropViewRect.left<=touchX && touchX<=mCropViewRect.right){
+                if (distanceToEdgeTop<closestPointDistance){
+                    closestPointDistance = distanceToEdgeTop;
+                    closestPointIndex = 5;
+                }
+                if (distanceToEdgeBottom<closestPointDistance){
+                    closestPointDistance = distanceToEdgeTop;
+                    closestPointIndex = 7;
+                }
+            }
+
+        }
+
         if (mFreestyleCropMode == FREESTYLE_CROP_MODE_ENABLE && closestPointIndex < 0 && mCropViewRect.contains(touchX, touchY)) {
             return 4;
         }
 
-//        for (int i = 0; i <= 8; i += 2) {
-//
-//            double distanceToCorner;
-//            if (i < 8) { // corners
-//                distanceToCorner = Math.sqrt(Math.pow(touchX - mCropGridCorners[i], 2)
-//                        + Math.pow(touchY - mCropGridCorners[i + 1], 2));
-//            } else { // center
-//                distanceToCorner = Math.sqrt(Math.pow(touchX - mCropGridCenter[0], 2)
-//                        + Math.pow(touchY - mCropGridCenter[1], 2));
-//            }
-//            if (distanceToCorner < closestPointDistance) {
-//                closestPointDistance = distanceToCorner;
-//                closestPointIndex = i / 2;
-//            }
-//        }
         return closestPointIndex;
     }
 
@@ -576,6 +608,14 @@ public class OverlayView extends View {
 
         mCropGridRowCount = a.getInt(R.styleable.ucrop_UCropView_ucrop_grid_row_count, DEFAULT_CROP_GRID_ROW_COUNT);
         mCropGridColumnCount = a.getInt(R.styleable.ucrop_UCropView_ucrop_grid_column_count, DEFAULT_CROP_GRID_COLUMN_COUNT);
+    }
+
+    public boolean isEnableEdgeMove() {
+        return mEnableEdgeMove;
+    }
+
+    public void setEnableEdgeMove(boolean enable) {
+        this.mEnableEdgeMove = enable;
     }
 
 
